@@ -18,6 +18,9 @@ const barGraphPadding = 4;
 const barGraphBorderSize = 1;
 const oneBarHeight = 5;
 
+/**
+ * @private
+ */
 const buildWrapper = () => {
   const wrapper = document.getElementById("chart-wrapper");
   wrapper.style.width = "77px";
@@ -29,11 +32,17 @@ const buildWrapper = () => {
   wrapper.style.flexDirection = "column";
 };
 
+/**
+ * @private
+ */
 const buildHeader = () => {
   const header = document.getElementById("chart-header");
   header.style.height = "40px";
 };
 
+/**
+ * @private
+ */
 const buildBody = () => {
   const body = document.getElementById("chart-body");
   body.style.height = "77px";
@@ -41,6 +50,9 @@ const buildBody = () => {
   buildBodyBarGraph();
 };
 
+/**
+ * @private
+ */
 const buildBodyBarGraph = () => {
   const barGraph = document.getElementById("bar-graph");
   barGraph.style.width = "37px";
@@ -49,11 +61,14 @@ const buildBodyBarGraph = () => {
   barGraph.style.padding = `${barGraphPadding}px 0`;
   barGraph.style.border = "solid 1px gray";
 
-  const [levelDomId, activeColor] = getDomIdAndActiveColor();
+  const [levelDomId, activeColor] = getPropertiesForTargetBar();
   setBarItemUsageValue(levelDomId, activeColor);
 };
 
-const getDomIdAndActiveColor = () => {
+/**
+ * @private
+ */
+const getPropertiesForTargetBar = () => {
   if (state.value <= 10) return ["low-active-1", LOW_COLOR_ACTIVE];
   if (state.value <= 20) return ["low-active-2", LOW_COLOR_ACTIVE];
   if (state.value <= 30) return ["low-active-3", LOW_COLOR_ACTIVE];
@@ -70,7 +85,6 @@ const getDomIdAndActiveColor = () => {
  *
  * @param {*} id
  * @param {*} color
- * @param {*} value
  */
 const setBarItemUsageValue = (id, color) => {
   // Set active color for bars whose value is less than the target bar
@@ -95,6 +109,9 @@ const setBarItemUsageValue = (id, color) => {
   targetBar.style.height = `${computedHeight}px`;
 };
 
+/**
+ * @private
+ */
 const buildPeakBox = () => {
   const borderBottomSize = 1;
   const peak = document.getElementById("peak-box");
@@ -105,38 +122,36 @@ const buildPeakBox = () => {
   peak.style.borderBottom = `solid ${borderBottomSize}px red`;
 };
 
-const renderInitialColors = () => {
+/**
+ * @private
+ */
+const setInitBarColors = () => {
   // High level color
   const high = document.getElementById("high");
   high.style.backgroundColor = `${HIGH_COLOR}`;
+
   // Medium level color
-  const medium1 = document.getElementById("medium-1");
-  const medium2 = document.getElementById("medium-2");
-  const medium3 = document.getElementById("medium-3");
-  medium1.style.backgroundColor = `${MEDIUM_COLOR}`;
-  medium2.style.backgroundColor = `${MEDIUM_COLOR}`;
-  medium3.style.backgroundColor = `${MEDIUM_COLOR}`;
+  for (let i = 1; i <= 3; i++) {
+    const mediumDom = document.getElementById(`medium-${i}`);
+    mediumDom.style.backgroundColor = `${MEDIUM_COLOR}`;
+  }
+
   // Low level color
-  const low1 = document.getElementById("low-1");
-  const low2 = document.getElementById("low-2");
-  const low3 = document.getElementById("low-3");
-  const low4 = document.getElementById("low-4");
-  const low5 = document.getElementById("low-5");
-  const low6 = document.getElementById("low-6");
-  low1.style.backgroundColor = `${LOW_COLOR}`;
-  low2.style.backgroundColor = `${LOW_COLOR}`;
-  low3.style.backgroundColor = `${LOW_COLOR}`;
-  low4.style.backgroundColor = `${LOW_COLOR}`;
-  low5.style.backgroundColor = `${LOW_COLOR}`;
-  low6.style.backgroundColor = `${LOW_COLOR}`;
+  for (let i = 1; i <= 6; i++) {
+    const lowDom = document.getElementById(`low-${i}`);
+    lowDom.style.backgroundColor = `${LOW_COLOR}`;
+  }
 };
 
+/**
+ * @private
+ */
 const renderGraph = () => {
   buildWrapper();
   buildHeader();
   buildBody();
   buildPeakBox();
-  renderInitialColors();
+  setInitBarColors();
 };
 
 onMounted(() => {
@@ -212,7 +227,9 @@ onMounted(() => {
 #chart-wrapper {
   #chart-header {
     width: 100%;
+    margin: auto;
     display: flex;
+    padding: 0 22px 0 14px;
     align-items: center;
 
     #name {
@@ -256,6 +273,7 @@ onMounted(() => {
     width: 100%;
     display: flex;
     align-items: center;
+    padding: 0 22px 0 14px;
 
     #current-value {
       width: 100%;
