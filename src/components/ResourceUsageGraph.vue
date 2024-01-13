@@ -1,51 +1,89 @@
-<script setup>
-import { onMounted, reactive } from "vue";
+<script setup lang="ts">
+import { onMounted, reactive, watch } from "vue";
 
-const state = reactive({
-  name: "CPU1",
-  value: 0,
-  peak: 76,
-  date: "",
+/**
+ * @private
+ */
+type Props = {
+  name: string;
+  currentValue: number;
+  peakValue: number;
+  recordedDateTime: string;
+};
+
+/**
+ * @private
+ */
+const props = withDefaults(defineProps<Props>(), {
+  name: () => "",
+  currentValue: () => 0,
+  peakValue: () => 0,
+  recordedDateTime: () => "",
 });
 
-const HIGH_COLOR = "orange";
-const MEDIUM_COLOR = "gray";
-const LOW_COLOR = "green";
-const HIGH_COLOR_ACTIVE = "red";
-const MEDIUM_COLOR_ACTIVE = "red";
-const LOW_COLOR_ACTIVE = "red";
+/**
+ * @private
+ */
+const state = reactive({
+  name: props.name,
+  value: props.currentValue,
+  peak: props.peakValue,
+  date: props.recordedDateTime,
+});
+
+/**
+ * @private
+ */
+const original = {
+  ...state,
+};
+const HIGH_COLOR = "#b31102";
+const HIGH_COLOR_ACTIVE = "#f62b04";
+const MEDIUM_COLOR = "#433f17";
+const MEDIUM_COLOR_ACTIVE = "#fbd453";
+const LOW_COLOR = "#47067e";
+const LOW_COLOR_ACTIVE = "#8470f8";
+const barGraphHeight = 77;
 const barGraphPadding = 4;
 const barGraphBorderSize = 1;
+const barGraphGapSize = 2;
 const oneBarHeight = 5;
+const peakBorderBottomSize = 1;
 
 /**
  * @private
  */
 const buildWrapper = () => {
-  const wrapper = document.getElementById("chart-wrapper");
+  const wrapper = document.getElementById("graph-wrapper");
   wrapper.style.width = "77px";
   wrapper.style.height = "149px";
   wrapper.style.border = "solid 2px gray";
   wrapper.style.backgroundColor = "black";
-  wrapper.style.position = "relative";
-  wrapper.style.display = "flex";
-  wrapper.style.flexDirection = "column";
 };
 
 /**
  * @private
  */
 const buildHeader = () => {
-  const header = document.getElementById("chart-header");
+  const header = document.getElementById("graph-header");
   header.style.height = "40px";
+  header.style.color = "white";
+};
+
+/**
+ * @private
+ */
+const buildBottom = () => {
+  const bottom = document.getElementById("graph-bottom");
+  bottom.style.height = "29px";
 };
 
 /**
  * @private
  */
 const buildBody = () => {
-  const body = document.getElementById("chart-body");
-  body.style.height = "77px";
+  const body = document.getElementById("graph-body");
+  body.style.height = `${barGraphHeight}px`;
 
   buildBodyBarGraph();
 };
@@ -61,14 +99,14 @@ const buildBodyBarGraph = () => {
   barGraph.style.padding = `${barGraphPadding}px 0`;
   barGraph.style.border = "solid 1px gray";
 
-  const [levelDomId, activeColor] = getPropertiesForTargetBar();
-  setBarItemUsageValue(levelDomId, activeColor);
+  setGraphColors();
 };
 
 /**
  * @private
  */
 const getPropertiesForTargetBar = () => {
+  if (state.value < 0 || state.value > 100) return [];
   if (state.value <= 10) return ["low-active-1", LOW_COLOR_ACTIVE];
   if (state.value <= 20) return ["low-active-2", LOW_COLOR_ACTIVE];
   if (state.value <= 30) return ["low-active-3", LOW_COLOR_ACTIVE];
@@ -78,48 +116,115 @@ const getPropertiesForTargetBar = () => {
   if (state.value <= 70) return ["medium-active-1", MEDIUM_COLOR_ACTIVE];
   if (state.value <= 80) return ["medium-active-2", MEDIUM_COLOR_ACTIVE];
   if (state.value <= 90) return ["medium-active-3", MEDIUM_COLOR_ACTIVE];
-  if (state.value <= 10) return ["high-active", HIGH_COLOR_ACTIVE];
+  if (state.value <= 100) return ["high-active", HIGH_COLOR_ACTIVE];
 };
 
 /**
- *
- * @param {*} id
- * @param {*} color
+ * @private
  */
-const setBarItemUsageValue = (id, color) => {
+const setGraphColors = () => {
+  console.log(
+    "setBarGraphColors >>> RUN at ",
+    new Date().getMinutes(),
+    ":",
+    new Date().getSeconds()
+  );
+
   // Set active color for bars whose value is less than the target bar
   const barNumber = Math.floor(state.value / 10);
-  for (let i = 1; i <= 9; i++) {
+  for (let i = 1; i <= 10; i++) {
     if (i <= barNumber) {
       const properties =
         i <= 6
           ? [`low-active-${i}`, LOW_COLOR_ACTIVE]
           : [`medium-active-${i - 6}`, MEDIUM_COLOR_ACTIVE];
 
-      const lowLevelDom = document.getElementById(`${properties[0]}`);
-      lowLevelDom.style.backgroundColor = properties[1];
-      lowLevelDom.style.height = `${oneBarHeight}px`;
+      const barItemDom = document.getElementById(`${properties[0]}`);
+      if (barItemDom) {
+        barItemDom.style.backgroundColor = properties[1];
+        barItemDom.style.height = `${oneBarHeight}px`;
+      }
+    } else if (i > barNumber && i < 10) {
+      // Clear history
+      const properties =
+        i <= 6
+          ? [`low-active-${i}`, LOW_COLOR_ACTIVE]
+          : [`medium-active-${i - 6}`, MEDIUM_COLOR_ACTIVE];
+
+      const barItemDom = document.getElementById(`${properties[0]}`);
+      barItemDom!.style.height = "0";
+    } else {
+      // Clear history
+      const highLevelDom = document.getElementById(`high-active`);
+      highLevelDom!.style.height = "0";
     }
   }
 
   // Compute and set active color for the target bar
-  const computedHeight = (oneBarHeight / 10) * (state.value % 10);
-  const targetBar = document.getElementById(id);
-  targetBar.style.backgroundColor = color;
-  targetBar.style.height = `${computedHeight}px`;
+  if (state.value % 10 !== 0) {
+    const [levelDomId, activeColor] = getPropertiesForTargetBar();
+    const computedHeight = (oneBarHeight / 10) * (state.value % 10);
+    const targetBar = document.getElementById(levelDomId);
+    if (targetBar) {
+      targetBar.style.backgroundColor = activeColor;
+      targetBar.style.height = `${computedHeight}px`;
+    }
+  }
+
+  // Set current percent value colors
+  const currentValue = document.getElementById("current-value");
+  currentValue!.style.color = computePercentValueColor(state.value);
 };
 
 /**
  * @private
  */
 const buildPeakBox = () => {
-  const borderBottomSize = 1;
-  const peak = document.getElementById("peak-box");
-  peak.style.bottom = `${
-    barGraphPadding + barGraphBorderSize + borderBottomSize / 2
-  }px`;
-  peak.style.right = "0";
-  peak.style.borderBottom = `solid ${borderBottomSize}px red`;
+  const initBottom =
+    barGraphPadding + barGraphBorderSize + peakBorderBottomSize / 2;
+  const onePercentHeight = oneBarHeight / 10;
+  const totalGapSize = computeTotalGapSize();
+  const peakPosition = onePercentHeight * state.peak + totalGapSize;
+
+  const peakBox = document.getElementById("peak-box");
+  if (peakBox) {
+    const peakColor = computePercentValueColor(state.peak);
+
+    peakBox.style.color = peakColor;
+    peakBox.style.borderBottom = `solid ${peakBorderBottomSize}px ${peakColor}`;
+    peakBox.style.right = "1px";
+    peakBox.style.width = "20px";
+    peakBox.style.bottom = `${initBottom}px`;
+    peakBox.style.transform = `translateY(-${peakPosition}px)`;
+
+    const triangleIcon = document.getElementById("triangle");
+    if (triangleIcon) {
+      const triangleSize = 4;
+      triangleIcon.style.borderLeft = `${triangleSize - 1}px solid transparent`;
+      triangleIcon.style.borderRight = `${
+        triangleSize - 1
+      }px solid transparent`;
+      triangleIcon.style.borderTop = `${triangleSize}px solid ${peakColor}`;
+    }
+  }
+};
+
+/**
+ * @private
+ */
+const computeTotalGapSize = () => {
+  if (state.peak <= 10) return 0;
+  if (state.peak % 10 === 0) return (state.peak / 10 - 1) * barGraphGapSize;
+  return Math.floor(state.peak / 10) * barGraphGapSize;
+};
+
+/**
+ * @private
+ */
+const computePercentValueColor = (value: number) => {
+  if (value <= 60) return LOW_COLOR_ACTIVE;
+  if (value <= 90) return MEDIUM_COLOR_ACTIVE;
+  if (value <= 100) return HIGH_COLOR_ACTIVE;
 };
 
 /**
@@ -149,30 +254,88 @@ const setInitBarColors = () => {
 const renderGraph = () => {
   buildWrapper();
   buildHeader();
+  buildBottom();
   buildBody();
-  buildPeakBox();
   setInitBarColors();
+  buildPeakBox();
 };
 
+/**
+ * @private
+ */
+watch(
+  () => props.currentValue,
+  (newValue) => {
+    if (newValue < 0 || newValue > 100 || newValue === original.value) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (original.value < newValue) {
+        state.value++;
+      } else {
+        state.value--;
+      }
+      // Update the bar graph
+      setGraphColors();
+      if (state.value === newValue) {
+        original.value = state.value;
+        clearInterval(interval);
+      }
+    }, 0);
+  }
+);
+
+/**
+ * @private
+ */
+watch(
+  () => props.name,
+  (newValue) => {
+    state.name = newValue;
+  }
+);
+
+/**
+ * @private
+ */
+watch(
+  () => props.peakValue,
+  (newValue) => {
+    if (newValue < 0 || newValue > 100 || newValue === original.peakValue) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (original.peak < newValue) {
+        state.peak++;
+      } else {
+        state.peak--;
+      }
+      // Update the peak box
+      buildPeakBox();
+      if (state.peak === newValue) {
+        original.peak = state.peak;
+        clearInterval(interval);
+      }
+    }, 0);
+  }
+);
+
+/**
+ * @private
+ */
 onMounted(() => {
   renderGraph();
-
-  const interval = setInterval(() => {
-    state.value++;
-    renderGraph();
-    if (state.value === 67) {
-      clearInterval(interval);
-    }
-  }, 10);
 });
 </script>
 
 <template>
-  <div id="chart-wrapper">
-    <div id="chart-header">
+  <div id="graph-wrapper">
+    <div id="graph-header">
       <div id="name">{{ state.name }}</div>
     </div>
-    <div id="chart-body">
+    <div id="graph-body">
       <div id="bar-graph">
         <div class="bar" id="high">
           <div class="bar-active" id="high-active"></div>
@@ -209,9 +372,10 @@ onMounted(() => {
         <div id="peak-value">
           {{ state.peak + "%" }}
         </div>
+        <div id="triangle"></div>
       </div>
     </div>
-    <div id="chart-bottom">
+    <div id="graph-bottom">
       <div id="current-value">{{ state.value + "%" }}</div>
     </div>
   </div>
@@ -220,12 +384,12 @@ onMounted(() => {
 <style scoped lang="scss">
 * {
   box-sizing: border-box !important;
-  font-size: 10px;
+  font-size: 8px;
   transition: 0.1s;
 }
 
-#chart-wrapper {
-  #chart-header {
+#graph-wrapper {
+  #graph-header {
     width: 100%;
     margin: auto;
     display: flex;
@@ -238,7 +402,7 @@ onMounted(() => {
     }
   }
 
-  #chart-body {
+  #graph-body {
     width: 100%;
     position: relative;
 
@@ -265,11 +429,17 @@ onMounted(() => {
 
     #peak-box {
       position: absolute;
-      box-sizing: border-box;
+      text-align: center;
+
+      #triangle {
+        width: 0;
+        height: 0;
+        margin: auto;
+      }
     }
   }
 
-  #chart-bottom {
+  #graph-bottom {
     width: 100%;
     display: flex;
     align-items: center;
