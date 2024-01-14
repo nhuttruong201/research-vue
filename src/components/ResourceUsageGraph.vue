@@ -43,12 +43,13 @@ const MEDIUM_COLOR = "#433f17";
 const MEDIUM_COLOR_ACTIVE = "#fbd453";
 const LOW_COLOR = "#47067e";
 const LOW_COLOR_ACTIVE = "#8470f8";
-const barGraphHeight = 77;
-const barGraphPadding = 4;
-const barGraphBorderSize = 1;
-const barGraphGapSize = 2;
-const oneBarHeight = 5;
-const peakBorderBottomSize = 1;
+const BAR_GRAPH_HEIGHT = 77;
+const BAR_GRAPH_PADDING = 4;
+const BAR_GRAPH_BORDER_SIZE = 1;
+const BAR_GRAPH_GAP_SIZE = 2;
+const ONE_BAR_HEIGHT = 5;
+const PEAK_BOTTOM_LINE_SIZE = 1;
+const TRIANGLE_SIZE = 4;
 
 /**
  * @private
@@ -83,7 +84,7 @@ const buildBottom = () => {
  */
 const buildBody = () => {
   const body = document.getElementById("graph-body");
-  body.style.height = `${barGraphHeight}px`;
+  body.style.height = `${BAR_GRAPH_HEIGHT}px`;
 
   buildBodyBarGraph();
 };
@@ -96,7 +97,7 @@ const buildBodyBarGraph = () => {
   barGraph.style.width = "37px";
   barGraph.style.height = "77px";
   barGraph.style.marginLeft = "14px";
-  barGraph.style.padding = `${barGraphPadding}px 0`;
+  barGraph.style.padding = `${BAR_GRAPH_PADDING}px 0`;
   barGraph.style.border = "solid 1px gray";
 
   setGraphColors();
@@ -123,13 +124,6 @@ const getPropertiesForTargetBar = () => {
  * @private
  */
 const setGraphColors = () => {
-  console.log(
-    "setBarGraphColors >>> RUN at ",
-    new Date().getMinutes(),
-    ":",
-    new Date().getSeconds()
-  );
-
   // Set active color for bars whose value is less than the target bar
   const barNumber = Math.floor(state.value / 10);
   for (let i = 1; i <= 10; i++) {
@@ -142,7 +136,7 @@ const setGraphColors = () => {
       const barItemDom = document.getElementById(`${properties[0]}`);
       if (barItemDom) {
         barItemDom.style.backgroundColor = properties[1];
-        barItemDom.style.height = `${oneBarHeight}px`;
+        barItemDom.style.height = `${ONE_BAR_HEIGHT}px`;
       }
     } else if (i > barNumber && i < 10) {
       // Clear history
@@ -163,7 +157,7 @@ const setGraphColors = () => {
   // Compute and set active color for the target bar
   if (state.value % 10 !== 0) {
     const [levelDomId, activeColor] = getPropertiesForTargetBar();
-    const computedHeight = (oneBarHeight / 10) * (state.value % 10);
+    const computedHeight = (ONE_BAR_HEIGHT / 10) * (state.value % 10);
     const targetBar = document.getElementById(levelDomId);
     if (targetBar) {
       targetBar.style.backgroundColor = activeColor;
@@ -181,8 +175,8 @@ const setGraphColors = () => {
  */
 const buildPeakBox = () => {
   const initBottom =
-    barGraphPadding + barGraphBorderSize + peakBorderBottomSize / 2;
-  const onePercentHeight = oneBarHeight / 10;
+    BAR_GRAPH_PADDING + BAR_GRAPH_BORDER_SIZE + PEAK_BOTTOM_LINE_SIZE / 2;
+  const onePercentHeight = ONE_BAR_HEIGHT / 10;
   const totalGapSize = computeTotalGapSize();
   const peakPosition = onePercentHeight * state.peak + totalGapSize;
 
@@ -191,7 +185,7 @@ const buildPeakBox = () => {
     const peakColor = computePercentValueColor(state.peak);
 
     peakBox.style.color = peakColor;
-    peakBox.style.borderBottom = `solid ${peakBorderBottomSize}px ${peakColor}`;
+    peakBox.style.borderBottom = `solid ${PEAK_BOTTOM_LINE_SIZE}px ${peakColor}`;
     peakBox.style.right = "1px";
     peakBox.style.width = "20px";
     peakBox.style.bottom = `${initBottom}px`;
@@ -199,12 +193,13 @@ const buildPeakBox = () => {
 
     const triangleIcon = document.getElementById("triangle");
     if (triangleIcon) {
-      const triangleSize = 4;
-      triangleIcon.style.borderLeft = `${triangleSize - 1}px solid transparent`;
-      triangleIcon.style.borderRight = `${
-        triangleSize - 1
+      triangleIcon.style.borderLeft = `${
+        TRIANGLE_SIZE - 1
       }px solid transparent`;
-      triangleIcon.style.borderTop = `${triangleSize}px solid ${peakColor}`;
+      triangleIcon.style.borderRight = `${
+        TRIANGLE_SIZE - 1
+      }px solid transparent`;
+      triangleIcon.style.borderTop = `${TRIANGLE_SIZE}px solid ${peakColor}`;
     }
   }
 };
@@ -214,8 +209,8 @@ const buildPeakBox = () => {
  */
 const computeTotalGapSize = () => {
   if (state.peak <= 10) return 0;
-  if (state.peak % 10 === 0) return (state.peak / 10 - 1) * barGraphGapSize;
-  return Math.floor(state.peak / 10) * barGraphGapSize;
+  if (state.peak % 10 === 0) return (state.peak / 10 - 1) * BAR_GRAPH_GAP_SIZE;
+  return Math.floor(state.peak / 10) * BAR_GRAPH_GAP_SIZE;
 };
 
 /**
