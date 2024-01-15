@@ -4,8 +4,8 @@ import ResourceUsageGraph from "./components/ResourceUsageGraph.vue";
 
 const data = reactive({
   name: "",
-  currentValue: 0,
-  peakValue: 0,
+  currentValue: 30,
+  peakValue: 50,
   recordedDateTime: "",
 });
 

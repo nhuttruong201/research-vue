@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, watch } from "vue";
+import { computed, onMounted, reactive, watch } from "vue";
 
 /**
  * @private
@@ -10,6 +10,18 @@ type Props = {
   peakValue: number;
   recordedDateTime: string;
 };
+
+type BarAlias =
+  | "LOW_1"
+  | "LOW_2"
+  | "LOW_3"
+  | "LOW_4"
+  | "LOW_5"
+  | "LOW_6"
+  | "MEDIUM_1"
+  | "MEDIUM_2"
+  | "MEDIUM_3"
+  | "HIGH";
 
 /**
  * @private
@@ -51,9 +63,6 @@ const ONE_BAR_HEIGHT = 5;
 const PEAK_BOTTOM_LINE_SIZE = 1;
 const TRIANGLE_SIZE = 4;
 
-/**
- * @private
- */
 const buildWrapper = () => {
   const wrapper = document.getElementById("graph-wrapper");
   wrapper.style.width = "77px";
@@ -62,26 +71,17 @@ const buildWrapper = () => {
   wrapper.style.backgroundColor = "black";
 };
 
-/**
- * @private
- */
 const buildHeader = () => {
   const header = document.getElementById("graph-header");
   header.style.height = "40px";
   header.style.color = "white";
 };
 
-/**
- * @private
- */
 const buildBottom = () => {
   const bottom = document.getElementById("graph-bottom");
   bottom.style.height = "29px";
 };
 
-/**
- * @private
- */
 const buildBody = () => {
   const body = document.getElementById("graph-body");
   body.style.height = `${BAR_GRAPH_HEIGHT}px`;
@@ -89,9 +89,6 @@ const buildBody = () => {
   buildBodyBarGraph();
 };
 
-/**
- * @private
- */
 const buildBodyBarGraph = () => {
   const barGraph = document.getElementById("bar-graph");
   barGraph.style.width = "37px";
@@ -99,127 +96,29 @@ const buildBodyBarGraph = () => {
   barGraph.style.marginLeft = "14px";
   barGraph.style.padding = `${BAR_GRAPH_PADDING}px 0`;
   barGraph.style.border = "solid 1px gray";
-
-  setGraphColors();
-};
-
-/**
- * @private
- */
-const getPropertiesForTargetBar = () => {
-  if (state.value < 0 || state.value > 100) return [];
-  if (state.value <= 10) return ["low-active-1", LOW_COLOR_ACTIVE];
-  if (state.value <= 20) return ["low-active-2", LOW_COLOR_ACTIVE];
-  if (state.value <= 30) return ["low-active-3", LOW_COLOR_ACTIVE];
-  if (state.value <= 40) return ["low-active-4", LOW_COLOR_ACTIVE];
-  if (state.value <= 50) return ["low-active-5", LOW_COLOR_ACTIVE];
-  if (state.value <= 60) return ["low-active-6", LOW_COLOR_ACTIVE];
-  if (state.value <= 70) return ["medium-active-1", MEDIUM_COLOR_ACTIVE];
-  if (state.value <= 80) return ["medium-active-2", MEDIUM_COLOR_ACTIVE];
-  if (state.value <= 90) return ["medium-active-3", MEDIUM_COLOR_ACTIVE];
-  if (state.value <= 100) return ["high-active", HIGH_COLOR_ACTIVE];
-};
-
-/**
- * @private
- */
-const setGraphColors = () => {
-  // Set active color for bars whose value is less than the target bar
-  const barNumber = Math.floor(state.value / 10);
-  for (let i = 1; i <= 10; i++) {
-    if (i <= barNumber) {
-      const properties =
-        i <= 6
-          ? [`low-active-${i}`, LOW_COLOR_ACTIVE]
-          : [`medium-active-${i - 6}`, MEDIUM_COLOR_ACTIVE];
-
-      const barItemDom = document.getElementById(`${properties[0]}`);
-      if (barItemDom) {
-        barItemDom.style.backgroundColor = properties[1];
-        barItemDom.style.height = `${ONE_BAR_HEIGHT}px`;
-      }
-    } else if (i > barNumber && i < 10) {
-      // Clear history
-      const properties =
-        i <= 6
-          ? [`low-active-${i}`, LOW_COLOR_ACTIVE]
-          : [`medium-active-${i - 6}`, MEDIUM_COLOR_ACTIVE];
-
-      const barItemDom = document.getElementById(`${properties[0]}`);
-      barItemDom!.style.height = "0";
-    } else {
-      // Clear history
-      const highLevelDom = document.getElementById(`high-active`);
-      highLevelDom!.style.height = "0";
-    }
-  }
-
-  // Compute and set active color for the target bar
-  if (state.value % 10 !== 0) {
-    const [levelDomId, activeColor] = getPropertiesForTargetBar();
-    const computedHeight = (ONE_BAR_HEIGHT / 10) * (state.value % 10);
-    const targetBar = document.getElementById(levelDomId);
-    if (targetBar) {
-      targetBar.style.backgroundColor = activeColor;
-      targetBar.style.height = `${computedHeight}px`;
-    }
-  }
-
-  // Set current percent value colors
-  const currentValue = document.getElementById("current-value");
-  currentValue!.style.color = computePercentValueColor(state.value);
 };
 
 /**
  * @private
  */
 const buildPeakBox = () => {
-  const initBottom =
-    BAR_GRAPH_PADDING + BAR_GRAPH_BORDER_SIZE + PEAK_BOTTOM_LINE_SIZE / 2;
-  const onePercentHeight = ONE_BAR_HEIGHT / 10;
-  const totalGapSize = computeTotalGapSize();
-  const peakPosition = onePercentHeight * state.peak + totalGapSize;
-
   const peakBox = document.getElementById("peak-box");
   if (peakBox) {
-    const peakColor = computePercentValueColor(state.peak);
-
-    peakBox.style.color = peakColor;
-    peakBox.style.borderBottom = `solid ${PEAK_BOTTOM_LINE_SIZE}px ${peakColor}`;
+    const initBottom =
+      BAR_GRAPH_PADDING + BAR_GRAPH_BORDER_SIZE + PEAK_BOTTOM_LINE_SIZE / 2;
+    peakBox.style.bottom = `${initBottom}px`;
     peakBox.style.right = "1px";
     peakBox.style.width = "20px";
-    peakBox.style.bottom = `${initBottom}px`;
-    peakBox.style.transform = `translateY(-${peakPosition}px)`;
-
-    const triangleIcon = document.getElementById("triangle");
-    if (triangleIcon) {
-      triangleIcon.style.borderLeft = `${
-        TRIANGLE_SIZE - 1
-      }px solid transparent`;
-      triangleIcon.style.borderRight = `${
-        TRIANGLE_SIZE - 1
-      }px solid transparent`;
-      triangleIcon.style.borderTop = `${TRIANGLE_SIZE}px solid ${peakColor}`;
-    }
   }
 };
 
 /**
  * @private
  */
-const computeTotalGapSize = () => {
+const calculateTotalGapSize = () => {
   if (state.peak <= 10) return 0;
   if (state.peak % 10 === 0) return (state.peak / 10 - 1) * BAR_GRAPH_GAP_SIZE;
   return Math.floor(state.peak / 10) * BAR_GRAPH_GAP_SIZE;
-};
-
-/**
- * @private
- */
-const computePercentValueColor = (value: number) => {
-  if (value <= 60) return LOW_COLOR_ACTIVE;
-  if (value <= 90) return MEDIUM_COLOR_ACTIVE;
-  if (value <= 100) return HIGH_COLOR_ACTIVE;
 };
 
 /**
@@ -272,7 +171,7 @@ watch(
         state.value--;
       }
       // Update the bar graph
-      setGraphColors();
+      // setGraphColors();
       if (state.value === newValue) {
         original.value = state.value;
         clearInterval(interval);
@@ -308,14 +207,95 @@ watch(
         state.peak--;
       }
       // Update the peak box
-      buildPeakBox();
+      // buildPeakBox();
       if (state.peak === newValue) {
         original.peak = state.peak;
         clearInterval(interval);
       }
-    }, 0);
+    }, 10);
   }
 );
+
+const computedPeakPosition = computed(() => {
+  const onePercentHeight = ONE_BAR_HEIGHT / 10;
+  const totalGapSize = calculateTotalGapSize();
+  const peakPosition = onePercentHeight * state.peak + totalGapSize;
+  return peakPosition;
+});
+
+const computedPeakColor = computed(() => {
+  if (state.peak <= 60) return LOW_COLOR_ACTIVE;
+  if (state.peak <= 90) return MEDIUM_COLOR_ACTIVE;
+  if (state.peak <= 100) return HIGH_COLOR_ACTIVE;
+});
+
+/**
+ * @private
+ * @param alias: BarAlias
+ */
+const calculateBarHeight = (alias: BarAlias) => {
+  const arr = [
+    "LOW_1",
+    "LOW_2",
+    "LOW_3",
+    "LOW_4",
+    "LOW_5",
+    "LOW_6",
+    "MEDIUM_1",
+    "MEDIUM_2",
+    "MEDIUM_3",
+    "HIGH",
+  ];
+
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === alias) {
+      if (state.value >= (i + 1) * 10) return ONE_BAR_HEIGHT;
+      if (state.value > i * 10)
+        return (ONE_BAR_HEIGHT / 10) * (state.value % 10);
+      return 0;
+    }
+  }
+};
+
+const computedActiveBarLow1 = computed(() => {
+  return calculateBarHeight("LOW_1");
+});
+
+const computedActiveBarLow2 = computed(() => {
+  return calculateBarHeight("LOW_2");
+});
+
+const computedActiveBarLow3 = computed(() => {
+  return calculateBarHeight("LOW_3");
+});
+
+const computedActiveBarLow4 = computed(() => {
+  return calculateBarHeight("LOW_4");
+});
+
+const computedActiveBarLow5 = computed(() => {
+  return calculateBarHeight("LOW_5");
+});
+
+const computedActiveBarLow6 = computed(() => {
+  return calculateBarHeight("LOW_6");
+});
+
+const computedActiveBarMedium1 = computed(() => {
+  return calculateBarHeight("MEDIUM_1");
+});
+
+const computedActiveBarMedium2 = computed(() => {
+  return calculateBarHeight("MEDIUM_2");
+});
+
+const computedActiveBarMedium3 = computed(() => {
+  return calculateBarHeight("MEDIUM_3");
+});
+
+const computedActiveBarHigh = computed(() => {
+  return calculateBarHeight("HIGH");
+});
 
 /**
  * @private
@@ -326,52 +306,96 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="graph-wrapper">
-    <div id="graph-header">
-      <div id="name">{{ state.name }}</div>
+  <div class="graph-wrapper" id="graph-wrapper">
+    <div class="graph-header" id="graph-header">
+      <div class="name">{{ state.name }}</div>
     </div>
-    <div id="graph-body">
-      <div id="bar-graph">
+    <div class="graph-body" id="graph-body">
+      <div class="bar-graph" id="bar-graph">
         <div class="bar" id="high">
-          <div class="bar-active" id="high-active"></div>
+          <div
+            class="bar-active high-active"
+            :style="{ height: computedActiveBarHigh + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="medium-3">
-          <div class="bar-active" id="medium-active-3"></div>
+          <div
+            class="bar-active medium-active"
+            :style="{ height: computedActiveBarMedium3 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="medium-2">
-          <div class="bar-active" id="medium-active-2"></div>
+          <div
+            class="bar-active medium-active"
+            :style="{ height: computedActiveBarMedium2 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="medium-1">
-          <div class="bar-active" id="medium-active-1"></div>
+          <div
+            class="bar-active medium-active"
+            :style="{ height: computedActiveBarMedium1 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-6">
-          <div class="bar-active" id="low-active-6"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow6 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-5">
-          <div class="bar-active" id="low-active-5"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow5 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-4">
-          <div class="bar-active" id="low-active-4"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow4 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-3">
-          <div class="bar-active" id="low-active-3"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow3 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-2">
-          <div class="bar-active" id="low-active-2"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow2 + 'px' }"
+          ></div>
         </div>
         <div class="bar" id="low-1">
-          <div class="bar-active" id="low-active-1"></div>
+          <div
+            class="bar-active low-active"
+            :style="{ height: computedActiveBarLow1 + 'px' }"
+          ></div>
         </div>
       </div>
-      <div id="peak-box">
+      <div
+        id="peak-box"
+        :style="{
+          transform: `translateY(-${computedPeakPosition}px)`,
+          color: computedPeakColor,
+          borderBottom: `solid ${PEAK_BOTTOM_LINE_SIZE}px ${computedPeakColor}`,
+        }"
+      >
         <div id="peak-value">
           {{ state.peak + "%" }}
         </div>
-        <div id="triangle"></div>
+        <div
+          id="triangle"
+          :style="{
+            borderLeft: `${TRIANGLE_SIZE - 1}px solid transparent`,
+            borderRight: `${TRIANGLE_SIZE - 1}px solid transparent`,
+            borderTop: `${TRIANGLE_SIZE}px solid ${computedPeakColor}`,
+          }"
+        ></div>
       </div>
     </div>
-    <div id="graph-bottom">
-      <div id="current-value">{{ state.value + "%" }}</div>
+    <div class="graph-bottom" id="graph-bottom">
+      <div class="current-value">{{ state.value + "%" }}</div>
     </div>
   </div>
 </template>
@@ -383,25 +407,36 @@ onMounted(() => {
   transition: 0.1s;
 }
 
-#graph-wrapper {
-  #graph-header {
+.low-active {
+  background-color: green;
+}
+.medium-active {
+  background-color: blue;
+}
+
+.high-active {
+  background-color: gold;
+}
+
+.graph-wrapper {
+  .graph-header {
     width: 100%;
     margin: auto;
     display: flex;
     padding: 0 22px 0 14px;
     align-items: center;
 
-    #name {
+    .name {
       width: 100%;
       text-align: center;
     }
   }
 
-  #graph-body {
+  .graph-body {
     width: 100%;
     position: relative;
 
-    #bar-graph {
+    .bar-graph {
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -422,11 +457,11 @@ onMounted(() => {
       }
     }
 
-    #peak-box {
+    .peak-box {
       position: absolute;
       text-align: center;
 
-      #triangle {
+      .triangle {
         width: 0;
         height: 0;
         margin: auto;
@@ -434,13 +469,13 @@ onMounted(() => {
     }
   }
 
-  #graph-bottom {
+  .graph-bottom {
     width: 100%;
     display: flex;
     align-items: center;
     padding: 0 22px 0 14px;
 
-    #current-value {
+    .current-value {
       width: 100%;
       text-align: center;
     }
